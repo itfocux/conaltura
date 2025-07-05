@@ -46,7 +46,7 @@ async function getDealsByContactId(contactId: string) {
 }
 
 async function getDealById(dealId: string) {
-  const res = await fetch(`https://api.hubapi.com/crm/v3/objects/deals/${dealId}?properties=negocio_lista_de_proyectos_y_etapa`, {
+  const res = await fetch(`https://api.hubapi.com/crm/v3/objects/deals/${dealId}?properties=lista_proyectos_negocios_sinco`, {
     headers: {
       'Authorization': `Bearer ${HUBSPOT_TOKEN}`,
     },
@@ -77,20 +77,55 @@ export async function findDealByEmailAndProject(email: string, proyecto: string)
   return data.results?.[0] || null;
 }
 
+async function updateDealById(dealId: string, updateData: any) {
+  const res = await fetch(`https://api.hubapi.com/crm/v3/objects/deals/${dealId}`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${HUBSPOT_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      properties: {
+        fecha_de_creacion_cotizacion: updateData['Fecha de creación'], // ejemplo de propiedad
+        idunidad: updateData.IDUnidad,
+        area_construida: updateData['Área construida'],
+        area_privada: updateData['Área privada'],
+        balcon: updateData['Balcón'],
+        id_de_cotizacion: updateData['Id. de cotización'],
+        proyecto_codigo_: updateData['Proyecto(codigo)'],
+        lote: updateData['Lote'],
+        terraza: updateData['Terraza'],
+        unidad: updateData['Unidad'],
+        idvisitante: updateData['IdVisitante'],
+        agrupacion: updateData['Agrupación'],
+        valor_cotizacion: updateData['VrCotiza']
+      },
+    }),
+  });
+
+  const data = await res.json();
+  return data;
+}
+
+
 export async function createOrUpdateDeal(cotizacion: any) {
+  // const contact = await getContactByEmail(cotizacion['Cliente potencial (Correo)']);
   const contact = await getContactByEmail('it@focuxdigital.com');
-  if (!contact) throw new Error('Contacto no encontrado');
 
-  const contactId = contact.id;
-  const deals = await getDealsByContactId(contactId);
+  if (contact) {
+    const contactId = contact.id;
+    const deals = await getDealsByContactId(contactId);
 
-  for (const d of deals) {
-    const dealData = await getDealById(d.id);
-    console.log('delas', dealData.properties);
-    if (dealData.properties?.negocio_lista_de_proyectos_y_etapa === 'Campura Etapa 3 Torre 2') {
-      // Ya existe el negocio, puedes actualizarlo aquí si lo deseas
-      console.log('Negocio ya existe con esa etapa y contacto', dealData.properties);
-      return;
+    if(deals.length > 0) {
+      for (const d of deals) {
+        const dealData = await getDealById(d.id);
+        // cotizacion['Proyecto(Nombre)']
+        if (dealData.properties?.lista_proyectos_negocios_sinco === '182-VENTAS PALMA ETAPA 2') {
+          // Crear propiedades de negocio en hubspot
+          updateDealById(d.hs_object_id, cotizacion);
+          console.log('Negocio ya existe con esa etapa y contacto', dealData.properties, cotizacion);
+        }
+      }
     }
   }
   // const existingDeal = await findDealByEmailAndProject(cotizacion['Cliente potencial (Correo)'], cotizacion['Proyecto(Nombre)']);

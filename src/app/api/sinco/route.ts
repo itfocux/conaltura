@@ -1,8 +1,192 @@
+
+
 // app/api/sinco/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
 const SINCO_AUTH_URL = 'https://www3.sincoerp.com/SincoConaltura/V3/API/Auth/Usuario';
 const SINCO_VISIT_URL = 'https://www3.sincoerp.com/SincoConaltura/V3/CBRClientes/API/SalaVentas/Visitantes';
+const HUBSPOT_URL = 'https://api.hubapi.com/crm/v3/objects/contacts/search';
+
+// Helper function to get Sinco access token
+async function getSincoAccessToken() {
+  const NomUsuario = process.env.SINCO_USERNAME;
+  const ClaveUsuario = process.env.SINCO_PASSWORD;
+
+  if (!NomUsuario || !ClaveUsuario) {
+    throw new Error('Faltan las credenciales Sinco API');
+  }
+
+  const authRes = await fetch(SINCO_AUTH_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ NomUsuario, ClaveUsuario }),
+  });
+
+  // if (!authRes.ok) {
+  //   const error = await authRes.text();
+  //   throw new Error(`Auth error sinco: ${error}`);
+  // }
+
+  const authData = await authRes.json();
+  const accessToken = authData.access_token;
+
+  if (!accessToken) {
+    throw new Error('No access token recibido');
+  }
+
+  return accessToken;
+}
+
+// GET method - Sync contacts with "cotizacion pedida" status from HubSpot to Sinco
+export async function GET() {
+  try {
+    const HUBSPOT_API_KEY = process.env.HUBSPOT_API_KEY;
+    
+    if (!HUBSPOT_API_KEY) {
+      return NextResponse.json({ message: 'HUBSPOT_API_KEY is required' }, { status: 400 });
+    }
+
+    // 1. Search for contacts with "cotizacion pedida" status
+    const hubspotRes = await fetch(HUBSPOT_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        filterGroups: [
+          {
+            filters: [
+              {
+                propertyName: 'etapa_del_lead_conaltura',
+                operator: 'EQ',
+                value: 'Cotización Enviada',
+              },
+            ],
+          },
+        ],
+        properties: [
+          'email', 
+          'firstname', 
+          'lastname', 
+          'phone',
+          'cedula_contacto',
+          'tipo_identificacion',
+          'sexo',
+          'address',
+          'country',
+          'city',
+          'zona',
+          'barrio',
+          'ocupacion',
+          'profesion',
+          'fecha_nacimiento',
+          'nivel_academico',
+          'estado_civil',
+          'cargo',
+          'etapa_del_lead_conaltura'
+        ],
+      }),
+    });
+
+    const hubspotData = await hubspotRes.json();
+    
+    const contactos = hubspotData.results || [];
+    
+    let enviados = 0;
+    let errores = [];
+
+    // Get Sinco access token once for all operations
+    const accessToken = await getSincoAccessToken();
+
+    for (const contacto of contactos) {
+      try {
+        const props = contacto.properties;
+        const email = props.email;
+        const celular = props.phone
+
+        const telefonoLimpio = celular.startsWith('+') ? celular.slice(1) : celular;
+
+        // 2. Verificar si el visitante ya existe en Sinco (por celular)
+        const sincoCheck = await fetch(`${SINCO_VISIT_URL}/Celular/${telefonoLimpio}`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        console.log('sincoCheck', sincoCheck)
+
+        const noExiste = sincoCheck.status === 409;
+
+        if (noExiste) {
+        // 2. Create visitor payload for Sinco
+        const visitantePayload = {
+          id: 1,
+          nombres: props.firstname || '',
+          apellidos: props.lastname || '',
+          correo: props.email,
+          celular: props.phone || '',
+          numeroIdentificacion: props?.cedula_contacto || '',
+          tipoIdentificacion: props?.tipo_identificacion || '',
+          sexo: props?.sexo || '',
+          haAutorizadoManejoInformacion: true,
+          direccionResidencia: props?.address || '',
+          idPaisResidencia: parseInt(props?.country || '0'),
+          idCiudadResidencia: parseInt(props?.city || '0'),
+          idZonaResidencia: parseInt(props?.zona || '0'),
+          idBarrioResidencia: parseInt(props?.barrio || '0'),
+          idOcupacion: parseInt(props?.ocupacion || '0'),
+          idProfesion: parseInt(props?.profesion || '0'),
+          fechaNacimiento: props?.fecha_nacimiento || new Date().toISOString(),
+          idPaisOficina: 0,
+          idCiudadOficina: 0,
+          valorIngresosFamiliares: 0,
+          haAutorizadoEnvioCorreo: true,
+          haAutorizadoEnvioSMS: true,
+          idNivelAcademico: parseInt(props?.nivel_academico || '0'),
+          idEstadoCivil: props?.estado_civil || '',
+          idCargoEmpresa: parseInt(props?.cargo || '0'),
+          idVisitanteExterno: '',
+          camposAdicionales: [],
+          HaAutorizadoEnvioWhatsApp: true,
+          HaAutorizadoLlamada: true,
+        };
+
+        // 3. Create visitor in Sinco
+        const visitRes = await fetch(SINCO_VISIT_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(visitantePayload),
+        });
+
+        if (visitRes.ok) {
+          enviados++;
+        } else {
+          const errorResponse = await visitRes.text();
+          errores.push({ email, error: errorResponse });
+        }
+      }
+      } catch (contactError) {
+        errores.push({ email: contacto.properties?.email, error: String(contactError) });
+      }
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      enviados, 
+      totalContactos: contactos.length,
+      errores: errores.length > 0 ? errores : undefined
+    });
+  } catch (error) {
+    console.error('Error en sincronización:', error);
+    return NextResponse.json({ success: false, error: String(error) }, { status: 500 });
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -62,33 +246,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Contacto no encontrado en HubSpot' }, { status: 404 });
     }
 
-    const NomUsuario = process.env.SINCO_USERNAME;
-    const ClaveUsuario = process.env.SINCO_PASSWORD;
-
-    if (!NomUsuario || !ClaveUsuario) {
-      return NextResponse.json({ message: 'Faltan las credenciales Sinco API' }, { status: 400 });
-    }
-
-    // Paso 1: Obtener el token
-    const authRes = await fetch(SINCO_AUTH_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ NomUsuario, ClaveUsuario }),
-    });
-
-    if (!authRes.status) {
-      const error = await authRes.text();
-      return NextResponse.json({ message: 'Auth error sinco', error }, { status: 401 });
-    }
-
-    const authData = await authRes.json();
-    const accessToken = authData.access_token;
-
-    if (!accessToken) {
-      return NextResponse.json({ message: 'No access token recibido' }, { status: 500 });
-    }
+    // Paso 1: Obtener el token usando la función helper
+    const accessToken = await getSincoAccessToken();
 
     console.log('visitResponse', accessToken, contacto)
 

@@ -4,10 +4,10 @@ import { NextResponse } from 'next/server';
 import { getCotizaciones } from '../../lib/cotizaciones';
 import { createOrUpdateDeal } from '../../lib/hubspot';
 
-export async function POST() {
+export async function GET() {
   try {
     const cotizaciones = await getCotizaciones();
-    const cotizacionesReales = cotizaciones.slice(-5); 
+    const cotizacionesReales = cotizaciones.slice(-1); 
     for (const cotizacion of cotizacionesReales) {
       await createOrUpdateDeal(cotizacion); // Lógica personalizada en hubspot.ts
     }

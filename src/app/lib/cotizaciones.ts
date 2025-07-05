@@ -24,7 +24,6 @@ async function getAccessToken(): Promise<string> {
 /** Obtener cotizaciones con token */
 export async function getCotizaciones(): Promise<any[]> {
   const token = await getAccessToken();
-  console.log('token', token);
   const res = await fetch(COTIZACIONES_URL, {
     method: 'GET',
     headers: {
