@@ -78,7 +78,7 @@ export async function findDealByEmailAndProject(email: string, proyecto: string)
 }
 
 async function updateDealById(dealId: string, updateData: any) {
-  const res = await fetch(`https://api.hubapi.com/crm/v3/objects/deals/${dealId}`, {
+  const res = await fetch(`https://api.hubapi.com/crm/v3/objects/deals/${parseInt(dealId)}`, {
     method: 'PATCH',
     headers: {
       'Authorization': `Bearer ${HUBSPOT_TOKEN}`,
@@ -104,6 +104,7 @@ async function updateDealById(dealId: string, updateData: any) {
   });
 
   const data = await res.json();
+  console.log('respuesta update', data, dealId)
   return data;
 }
 
@@ -122,7 +123,7 @@ export async function createOrUpdateDeal(cotizacion: any) {
         // cotizacion['Proyecto(Nombre)']
         if (dealData.properties?.lista_proyectos_negocios_sinco === '182-VENTAS PALMA ETAPA 2') {
           // Crear propiedades de negocio en hubspot
-          updateDealById(d.hs_object_id, cotizacion);
+          updateDealById(dealData.properties.hs_object_id, cotizacion);
           console.log('Negocio ya existe con esa etapa y contacto', dealData.properties, cotizacion);
         }
       }

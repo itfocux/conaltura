@@ -125,7 +125,7 @@ export async function GET() {
             nombres: props.firstname || '',
             apellidos: props.lastname || '',
             correo: props.email,
-            celular: props.phone || '',
+            celular: telefonoLimpio || '',
             numeroIdentificacion: props?.cedula_contacto || '',
             tipoIdentificacion: props?.tipo_identificacion || '',
             sexo: props?.sexo || '',
