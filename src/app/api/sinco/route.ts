@@ -116,8 +116,6 @@ export async function GET() {
           },
         });
 
-        console.log('sincoCheck', sincoCheck)
-
         const noExiste = sincoCheck.status === 409;
 
         if (noExiste) {
