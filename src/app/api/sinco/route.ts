@@ -67,6 +67,7 @@ export async function GET() {
             ],
           },
         ],
+        limit: 100,
         properties: [
           'email', 
           'firstname', 
@@ -115,6 +116,8 @@ export async function GET() {
             Authorization: `Bearer ${accessToken}`,
           },
         });
+
+        console.log('sincoCheck', sincoCheck, props)
 
         const noExiste = sincoCheck.status === 409;
 
