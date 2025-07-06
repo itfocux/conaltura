@@ -128,39 +128,4 @@ export async function createOrUpdateDeal(cotizacion: any) {
       }
     }
   }
-  // const existingDeal = await findDealByEmailAndProject(cotizacion['Cliente potencial (Correo)'], cotizacion['Proyecto(Nombre)']);
-  // const existingDeal = await findDealByEmailAndProject('it@focuxdigital.com', 'Campura Etapa 3 Torre 2');
-  
-  // Cotizaciones propiedades
-  // const payload = {
-  //   properties: {
-  //     dealname: cotizacion.nombreProyecto,
-  //     email: cotizacion.correo,
-  //     monto: cotizacion.valor,
-  //     etapa: cotizacion.estado,
-  //     fecha_cotizacion: cotizacion.fecha
-  //     // Agrega más campos según los disponibles
-  //   }
-  // };
-
-  // if (existingDeal) {
-  //   await fetch(`${API_BASE}/crm/v3/objects/deals/${existingDeal.id}`, {
-  //     method: 'PATCH',
-  //     headers: {
-  //       'Authorization': `Bearer ${HUBSPOT_TOKEN}`,
-  //       'Content-Type': 'application/json',
-  //     },
-  //     body: JSON.stringify(payload),
-  //   });
-  // } 
-//   else {
-//     await fetch(`${API_BASE}/crm/v3/objects/deals`, {
-//       method: 'POST',
-//       headers: {
-//         'Authorization': `Bearer ${HUBSPOT_TOKEN}`,
-//         'Content-Type': 'application/json',
-//       },
-//       body: JSON.stringify(payload),
-//     });
-//   }
 }

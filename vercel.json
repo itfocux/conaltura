@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/sinco",
+      "schedule": "0 6,10,14,18,22 * * *"
+    },
+    {
+      "path": "/api/sync-cotizaciones",
+      "schedule": "0 2 * * *"
+    }
+  ]
+}
