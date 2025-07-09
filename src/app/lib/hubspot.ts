@@ -87,24 +87,24 @@ async function updateDealById(dealId: string, updateData: any) {
     body: JSON.stringify({
       properties: {
         fecha_de_creacion_cotizacion: updateData['Fecha de creación'], // ejemplo de propiedad
-        idunidad: updateData.IDUnidad,
-        area_construida: updateData['Área construida'],
-        area_privada: updateData['Área privada'],
-        balcon: updateData['Balcón'],
+        idunidad: updateData.IDUnidad || 0,
+        area_construida: updateData['Área construida'] || 0,
+        area_privada: updateData['Área privada'] || 0,
+        balcon: updateData['Balcón'] || 0,
         id_de_cotizacion: updateData['Id. de cotización'],
         proyecto_codigo_: updateData['Proyecto(codigo)'],
-        lote: updateData['Lote'],
-        terraza: updateData['Terraza'],
-        unidad: updateData['Unidad'],
-        idvisitante: updateData['IdVisitante'],
-        agrupacion: updateData['Agrupación'],
-        valor_cotizacion: updateData['VrCotiza']
+        lote: updateData['Lote'] || 0,
+        terraza: updateData['Terraza'] || 0,
+        unidad: updateData['Unidad'] || '',
+        idvisitante: updateData['IdVisitante'] || 0,
+        agrupacion: updateData['Agrupación'] || 0,
+        valor_cotizacion: updateData['VrCotiza'],
+        amount: updateData['VrCotiza']
       },
     }),
   });
 
   const data = await res.json();
-  console.log('respuesta update', data, dealId)
   return data;
 }
 
@@ -124,7 +124,6 @@ export async function createOrUpdateDeal(cotizacion: any) {
         if (dealData.properties?.lista_proyectos_negocios_sinco === '182-VENTAS PALMA ETAPA 2') {
           // Crear propiedades de negocio en hubspot
           updateDealById(dealData.properties.hs_object_id, cotizacion);
-          console.log('Negocio ya existe con esa etapa y contacto', dealData.properties, cotizacion);
         }
       }
     }
