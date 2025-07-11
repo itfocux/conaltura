@@ -110,8 +110,7 @@ async function updateDealById(dealId: string, updateData: any) {
 
 
 export async function createOrUpdateDeal(cotizacion: any) {
-  // const contact = await getContactByEmail(cotizacion['Cliente potencial (Correo)']);
-  const contact = await getContactByEmail('it@focuxdigital.com');
+  const contact = await getContactByEmail(cotizacion['Cliente potencial (Correo)'].toLowerCase());
 
   if (contact) {
     const contactId = contact.id;
@@ -120,8 +119,7 @@ export async function createOrUpdateDeal(cotizacion: any) {
     if(deals.length > 0) {
       for (const d of deals) {
         const dealData = await getDealById(d.id);
-        // cotizacion['Proyecto(Nombre)']
-        if (dealData.properties?.lista_proyectos_negocios_sinco === '182-VENTAS PALMA ETAPA 2') {
+        if (dealData.properties?.lista_proyectos_negocios_sinco === cotizacion['Proyecto(Nombre)']) {
           // Crear propiedades de negocio en hubspot
           updateDealById(dealData.properties.hs_object_id, cotizacion);
         }

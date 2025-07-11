@@ -7,7 +7,7 @@ import { createOrUpdateDeal } from '../../lib/hubspot';
 export async function GET() {
   try {
     const cotizaciones = await getCotizaciones();
-    const cotizacionesReales = cotizaciones.slice(-1);
+    const cotizacionesReales = cotizaciones.slice(-100);
     for (const cotizacion of cotizacionesReales) {
       await createOrUpdateDeal(cotizacion); // Lógica personalizada en hubspot.ts
     }
