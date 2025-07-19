@@ -7,12 +7,11 @@ import { createOrUpdateDeal } from '../../lib/hubspot';
 export async function GET() {
   try {
     const cotizaciones = await getCotizaciones();
-    const cotizacionesReales = cotizaciones.slice(-100);
-    for (const cotizacion of cotizacionesReales) {
+    for (const cotizacion of cotizaciones) {
       await createOrUpdateDeal(cotizacion); // Lógica personalizada en hubspot.ts
     }
 
-    return NextResponse.json({ status: 'ok', total: cotizacionesReales.length });
+    return NextResponse.json({ status: 'ok', total: cotizaciones.length });
   } catch (error: any) {
     console.error('Error al sincronizar cotizaciones:', error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
