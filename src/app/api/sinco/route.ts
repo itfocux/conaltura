@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 
 const SINCO_AUTH_URL = process.env.SINCO_AUTH_URL as any;
 const SINCO_VISIT_URL = process.env.SINCO_VISIT_URL as any;
+const SINCO_VISIT_UPDATE_URL = process.env.SINCO_VISIT_UPDATE_URL as any;
 const HUBSPOT_URL = process.env.HUBSPOT_URL as any;
 
 // Helper function to get Sinco access token
@@ -97,6 +98,7 @@ export async function GET() {
     const contactos = hubspotData.results || [];
     
     let enviados = 0;
+    let actualizados = 0;
     let errores = [];
 
     // Get Sinco access token once for all operations
@@ -118,6 +120,7 @@ export async function GET() {
         });
 
         const noExiste = sincoCheck.status === 409;
+        const siExiste = sincoCheck.status === 200;
 
         if (noExiste) {
           // 2. Create visitor payload for Sinco
@@ -169,6 +172,34 @@ export async function GET() {
             const errorResponse = await visitRes.text();
             errores.push({ email, error: errorResponse });
           }
+        } else if(siExiste) {
+          const data = await sincoCheck.json();
+          const actualizarPayload = {
+            ...data[0],
+            nombres: props.firstname || '',
+            apellidos: props.lastname || '',
+            correo: props.email,
+            celular: telefonoLimpio || '',
+            numeroIdentificacion: props?.cedula_contacto || '',
+            tipoIdentificacion: props?.tipo_identificacion || '',
+          }
+
+          // Actualizar visitor in Sinco
+          const visitRes = await fetch(SINCO_VISIT_UPDATE_URL, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify(actualizarPayload),
+          });
+
+          if (visitRes.ok) {
+            actualizados++;
+          } else {
+            const errorResponse = await visitRes.text();
+            errores.push({ email, error: errorResponse });
+          }
         }
       } catch (contactError) {
         errores.push({ email: contacto.properties?.email, error: String(contactError) });
@@ -177,7 +208,8 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      enviados, 
+      enviados,
+      actualizados,
       totalContactos: contactos.length,
       errores: errores.length > 0 ? errores : undefined
     });
