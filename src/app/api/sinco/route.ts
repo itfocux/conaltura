@@ -132,7 +132,7 @@ export async function GET() {
             celular: telefonoLimpio || '',
             numeroIdentificacion: props?.cedula_contacto || '',
             tipoIdentificacion: props?.tipo_identificacion || '',
-            sexo: props?.sexo || '',
+            sexo: props?.sexo ? props?.sexo === 'masculino' ? 'M' : 'F'  : '',
             haAutorizadoManejoInformacion: true,
             direccionResidencia: props?.address || '',
             idPaisResidencia: parseInt(props?.hs_country_region_code || '0'),
@@ -182,6 +182,7 @@ export async function GET() {
             celular: telefonoLimpio || '',
             numeroIdentificacion: props?.cedula_contacto || '',
             tipoIdentificacion: props?.tipo_identificacion || '',
+            sexo: props?.sexo ? props?.sexo === 'masculino' ? 'M' : 'F'  : '',
           }
 
           // Actualizar visitor in Sinco
