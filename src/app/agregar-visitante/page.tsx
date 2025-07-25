@@ -19,7 +19,7 @@ export default function AgregarVisitantePage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        alert(`¡Operación exitosa! Se sincronizaron ${data.enviados} visitantes de ${data.totalContactos} contactos totales.`);
+        alert(`¡Operación exitosa! Se sincronizaron ${data.enviados}, se actualizaron ${data.actualizados} visitantes de ${data.totalContactos} contactos totales.`);
       } else {
         alert(`Error en la operación: ${data.error || 'Error desconocido'}`);
       }
