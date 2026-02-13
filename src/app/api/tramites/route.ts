@@ -5,14 +5,15 @@ const SINCO_AUTH_URL = 'https://pruebas3.sincoerp.com/SincoInmCarbone_Nueva_PRBI
 const SINCO_VISIT_URL = process.env.SINCO_VISIT_URL as any;
 const SINCO_VISIT_UPDATE_URL = process.env.SINCO_VISIT_UPDATE_URL as any;
 const HUBSPOT_API_URL = "https://api.hubapi.com";
-const HUBSPOT_TOKEN = 'pat-na1-2d6bc78c-c335-4264-9a48-1fa93bd30595';
+const HUBSPOT_TOKEN = process.env.HUBSPOT_API_KEY!;
 const SINCO_BASE_URL = 'https://pruebas3.sincoerp.com/SincoInmCarbone_Nueva_PRBINT/V3/CBRClientes/API/Ventas/NumeroIdentificacion'
 const HUBSPOT_BASE_URL_DEALS = "https://api.hubapi.com/crm/v3/objects/deals";
+const tramitesEndpoint = 'https://api.hubapi.com/crm/v3/objects/deals/';
 
 // Helper function to get Sinco access token
 async function getSincoAccessToken() {
-  const NomUsuario = "APICBR";
-  const ClaveUsuario = "cvapLoD2d3RqL568tt1NhFE7Y0hIp9vxj6lTA20bw2r2E6x++3unVhNY/TZrElHSoxgq9YwRmbSbj2BIzWDjASfAPuccZKSnnrLD4QatGSo9b81ot+jeU+q/ena9OrIF9J8HbyMUtb0aQGVnSYdz2Cj2LFOaawLHSXww3N5IB9Yc1hQQokt8CqYy2iHJdIHMsOzQsYOX6ded9yVNDKzlQ0cPfwZ0s0qG/FBejq4JsB70bJYgR20f+5QaYHqKw+grfyjjSLA9z5cJ4wee1mMl+/LGtP36vJslkeRgAnHmNko=5";
+  const NomUsuario = process.env.SINCO_USERNAME;
+  const ClaveUsuario = process.env.SINCO_PASSWORD
 
   if (!NomUsuario || !ClaveUsuario) {
     throw new Error('Faltan las credenciales Sinco API');
@@ -73,6 +74,41 @@ async function fetchContacts(after?: string) {
   return res.json();
 }
 
+async function fetchDealDocuments(after?: string) {
+  const res = await fetch(`${HUBSPOT_API_URL}/crm/v3/objects/deals/search`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${HUBSPOT_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+      body: JSON.stringify({
+    filterGroups: [
+      {
+        filters: [
+          {
+            propertyName: "documento_comprador_1",
+            operator: "HAS_PROPERTY"
+          }
+        ]
+      }
+    ],
+    properties: [
+      "documento_comprador_1",
+      "dealname",
+      "amount"
+    ],
+    limit: 100,
+    after
+  }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`HubSpot API error: ${res.status}`);
+  }
+
+  return res.json();
+}
+
 // GET method - Sync contacts with "cotizacion pedida" status from HubSpot to Sinco
 export async function GET() {
     if (!HUBSPOT_TOKEN) {
@@ -83,9 +119,9 @@ export async function GET() {
         let allContacts: any[] = [];
         let after: string | undefined = undefined;
 
-        // Consulta contactos con propiedad negocio true
+        // Consulta documentos negocios 
         do {
-            const data = await fetchContacts(after);
+            const data = await fetchDealDocuments(after);
             allContacts = [...allContacts, ...(data.results || [])];
             after = data.paging?.next?.after;
         } while (after);
@@ -93,8 +129,7 @@ export async function GET() {
         // Extrae el numero de identificacion
         const identificationNumbers = allContacts.map((c) => ({
             id: c.id,
-            numero_de_documento: c.properties?.numero_de_documento || null,
-            email: c.properties?.email || null,
+            numero_de_documento: c.properties?.documento_comprador_1 || null,
         }));
 
         // Sinco access token
@@ -136,13 +171,10 @@ export async function GET() {
                 return {
                     id: contact.id,
                     numero_de_documento: contact.numero_de_documento,
-                    email: contact.email,
                     sincoData, // response from Sinco
                 };
             })
          );
-
-        console.log('results', results);
 
         // Envia tramites a a negocio en hubspot
         const updates = await Promise.all(
@@ -151,45 +183,95 @@ export async function GET() {
                 if (!sinco || !sinco.idHubspot) {
                     return { contactId: contact.id, skipped: true };
                 }
-
+                console.log('sincoData', sinco)
                 // Build properties object from tramites
                 const properties: any = {};
-                sinco.tramites.forEach((tramite: any) => {
-                    if(tramite.fechaCumplimiento){
-                        const propertyName = `tramite_${tramite.codigo.toLowerCase()}`;
-                        properties[propertyName] = 'TRUE';
-                    }
-                });
+                const propertiesTramite: any = {};
+                const tramitesUpdate = await Promise.all(
+                  sinco.tramites.map(async(tramite: any) => {
+                    // if(tramite.fechaCumplimiento){
+                    //     const propertyName = `tramite_${tramite.codigo.toLowerCase()}`;
+                    //     properties[propertyName] = 'TRUE';
+                    // }
+                    // const propertiesTramite = {
+                    //   nombre: tramite.nombre,
+                    //   fecha_de_compromiso: tramite.fechaCompromiso,
+                    //   fecha_de_cumplimiento: tramite.fechaCumplimiento, 
+                    // };
+                    // const requestBody = {
+                    //   properties: propertiesTramite,
+                    //   associations: [
+                    //     {
+                    //       to: {
+                    //         id: sinco.idHubspot,
+                    //       },
+                    //       types: [
+                    //         {
+                    //           associationCategory: "HUBSPOT_DEFINED",
+                    //           associationTypeId: 19,
+                    //         },
+                    //       ],
+                    //     },
+                    //   ],
+                    // };
 
-                console.log('properties', properties)
+                    let data = [];
+
+                    propertiesTramite[`tramite_${tramite.codigo.toLowerCase()}_compromiso`] = tramite.fechaCompromiso
+                    propertiesTramite[`tramite_${tramite.codigo.toLowerCase()}_cumplimiento`] = tramite.fechaCumplimiento
+
+                    const response = await fetch(`${tramitesEndpoint}/${'45145002254'}`, {
+                        method: "PATCH",
+                        headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${HUBSPOT_TOKEN}`,
+                        },
+                        body: JSON.stringify({properties: propertiesTramite }),
+                    });
+
+                    data = await response.json();
+
+                    if (!response.ok) {
+                      console.error('HubSpot API error:', data);
+                      // Return HubSpot's error message to the client
+                      return NextResponse.json(data, { status: response.status });
+                    }
+
+                    return {
+                      data
+                    }
+                })
+                );
+                
+                console.log('tramitesUpdate', tramitesUpdate)
 
                 // Update deal in HubSpot
-                const url = `${HUBSPOT_BASE_URL_DEALS}/${sinco.idHubspot}`;
-                const res = await fetch(url, {
-                    method: "PATCH",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${HUBSPOT_TOKEN}`,
-                    },
-                    body: JSON.stringify({ properties }),
-                });
+                // const url = `${HUBSPOT_BASE_URL_DEALS}/${sinco.idHubspot}`;
+                // const res = await fetch(url, {
+                //     method: "PATCH",
+                //     headers: {
+                //         "Content-Type": "application/json",
+                //         Authorization: `Bearer ${HUBSPOT_TOKEN}`,
+                //     },
+                //     body: JSON.stringify({ properties }),
+                // });
 
-                if (!res.ok) {
-                    const errorText = await res.text();
-                    return {
-                        contactId: contact.id,
-                        dealId: sinco.idHubspot,
-                        error: errorText,
-                    };
-                }
+                // if (!res.ok) {
+                //     const errorText = await res.text();
+                //     return {
+                //         contactId: contact.id,
+                //         dealId: sinco.idHubspot,
+                //         error: errorText,
+                //     };
+                // }
 
-                const data = await res.json();
+                // const data = await res.json();
                 return {
                     contactId: contact.id,
                     dealId: sinco.idHubspot,
                     updated: true,
                     updatedProperties: properties,
-                    hubspotResponse: data,
+                    hubspotResponse: true,
                 };
             })
         );

@@ -108,6 +108,77 @@ async function updateDealById(dealId: string, updateData: any) {
   return data;
 }
 
+function lowercaseKeys(obj : any) {
+  return Object.fromEntries(
+    Object.entries(obj).map(([key, value]) => [key.toLowerCase(), value])
+  );
+}
+
+export async function updateDealVentaById(dataVenta: any) {
+  try {
+    const idHubSpot = dataVenta?.idHubSpot;
+    if (!idHubSpot) {
+      return {
+        success: false,
+        idHubSpot: null,
+        error: 'Missing idHubSpot',
+      };
+    }
+
+    const updateData = lowercaseKeys(dataVenta);
+    delete updateData.idHubSpot;
+
+    const res = await fetch(
+      `https://api.hubapi.com/crm/v3/objects/deals/${parseInt(idHubSpot)}`,
+      {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${HUBSPOT_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          properties: {
+            ...updateData,
+            marcacion_de_bloqueo_de_venta:updateData['Marcación de Bloqueo de Venta'] || '',
+            macroproyecto: updateData['MacroProyecto(Nombre)'] || '',
+            macroproyectocodigo:updateData['MacroProyecto(Codigo)'] || 0,
+            proyectonombre: updateData['Proyecto(Nombre)'] || '',
+            proyectocodigo: updateData['Proyecto(codigo)'] || 0,
+            fecha_de_creacion: updateData['Fecha de creación'] || '',
+            dias_mora: updateData['Dias Mora'] || 0,
+            valor_cuota: updateData['valor cuota'] || 0,
+            saldo_mora: updateData['saldo mora'] || 0,
+            estado_de_venta: updateData['Estado de venta'] || '',
+          },
+        }),
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      return {
+        success: false,
+        idHubSpot,
+        status: res.status,
+        error: data?.message || 'HubSpot error',
+      };
+    }
+
+    return {
+      success: true,
+      idHubSpot,
+      data,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      idHubSpot: dataVenta?.idHubSpot,
+      error: error?.message || 'Unexpected error',
+    };
+  }
+}
+
 
 export async function createOrUpdateDeal(cotizacion: any) {
   const contact = await getContactByEmail(cotizacion['Cliente potencial (Correo)'].toLowerCase());
@@ -116,7 +187,7 @@ export async function createOrUpdateDeal(cotizacion: any) {
     const contactId = contact.id;
     const deals = await getDealsByContactId(contactId);
 
-    if(deals.length > 0) {
+    if (deals.length > 0) {
       for (const d of deals) {
         const dealData = await getDealById(d.id);
         if (dealData.properties?.lista_proyectos_negocios_sinco === cotizacion['Proyecto(Nombre)']) {
