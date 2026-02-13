@@ -6,8 +6,7 @@ const VENTAS_URL = 'https://site.conaltura.com/api/consultas/crm/ventas_hs';
 
 
 const CONALTURA_USERNAME = process.env.CONALTURA_USERNAME!;
-// const CONALTURA_PASSWORD = process.env.CONALTURA_PASSWORD!;
-const CONALTURA_PASSWORD = process.env.CONALTURA_PASSWORD;
+const CONALTURA_PASSWORD = process.env.CONALTURA_PASSWORD!;
 
 /** Obtener access_token de conaltura */
 async function getAccessToken(): Promise<string> {

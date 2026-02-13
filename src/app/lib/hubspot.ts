@@ -108,7 +108,7 @@ async function updateDealById(dealId: string, updateData: any) {
   return data;
 }
 
-function lowercaseKeys(obj : any) {
+function lowercaseKeys(obj: any) {
   return Object.fromEntries(
     Object.entries(obj).map(([key, value]) => [key.toLowerCase(), value])
   );
@@ -125,8 +125,28 @@ export async function updateDealVentaById(dataVenta: any) {
       };
     }
 
-    const updateData = lowercaseKeys(dataVenta);
+    const updateData = dataVenta;
+    const updateDataLower = lowercaseKeys(dataVenta);
     delete updateData.idHubSpot;
+    const {
+      idcomprador,
+      doccomprador,
+      compradorcorreo,
+      compradorcelular,
+      nombrecomprador,
+      desistimiento,
+      unidadppal,
+      invdescunidad,
+      invtipoinmueble,
+      invarconstruida,
+      numeroencargofiduciario,
+      escriturafecha,
+      valorarras,
+      fechadesistimientos,
+      valorventaagrupacion,
+      escriturano,
+      escrituravalor
+    } = updateDataLower;
 
     const res = await fetch(
       `https://api.hubapi.com/crm/v3/objects/deals/${parseInt(idHubSpot)}`,
@@ -138,10 +158,28 @@ export async function updateDealVentaById(dataVenta: any) {
         },
         body: JSON.stringify({
           properties: {
-            ...updateData,
-            marcacion_de_bloqueo_de_venta:updateData['Marcación de Bloqueo de Venta'] || '',
+            idventa: updateData['id. Venta'],
+            idvisitante: updateData['id. Visitante'],
+            idcomprador,
+            doccomprador,
+            compradorcorreo,
+            compradorcelular,
+            nombrecomprador,
+            desistimiento,
+            unidadppal,
+            invdescunidad,
+            invtipoinmueble,
+            invarconstruida,
+            numeroencargofiduciario,
+            escriturafecha,
+            valorarras,
+            fechadesistimientos,
+            valorventaagrupacion,
+            escriturano,
+            escrituravalor,
+            marcacion_de_bloqueo_de_venta: updateData['Marcación de Bloqueo de Venta'] || '',
             macroproyecto: updateData['MacroProyecto(Nombre)'] || '',
-            macroproyectocodigo:updateData['MacroProyecto(Codigo)'] || 0,
+            macroproyectocodigo: updateData['MacroProyecto(Codigo)'] || 0,
             proyectonombre: updateData['Proyecto(Nombre)'] || '',
             proyectocodigo: updateData['Proyecto(codigo)'] || 0,
             fecha_de_creacion: updateData['Fecha de creación'] || '',
@@ -168,7 +206,6 @@ export async function updateDealVentaById(dataVenta: any) {
     return {
       success: true,
       idHubSpot,
-      data,
     };
   } catch (error: any) {
     return {
