@@ -161,7 +161,7 @@ export async function updateDealVentaById(dataVenta: any) {
           properties: {
             idventa: updateData['id. Venta'],
             idvisitante: updateData['id. Visitante'],
-            id_comprador_sinco: updateData['id. Visitante'],
+            id_comprador_sinco: idcomprador,
             documento_comprador_1: doccomprador,
             compradorcorreo,
             compradorcelular,
