@@ -4,6 +4,10 @@ import { updateDealVentaById } from '../../lib/hubspot';
 
 const BATCH_SIZE = 10;
 
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function GET() {
   try {
     const ventas = await getVentas();
@@ -18,6 +22,8 @@ export async function GET() {
       );
 
       results.push(...batchResults);
+
+      await delay(15);
     }
 
     const normalized = results.map((r) =>
